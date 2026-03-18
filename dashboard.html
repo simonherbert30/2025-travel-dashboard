@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2025 Travel Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        :root {
+            --bg: #F1F5F9;
+            --card: #FFFFFF;
+            --border: #E2E8F0;
+            --text: #1E293B;
+            --muted: #64748B;
+            --accent: #2563EB;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: linear-gradient(135deg, #0F2444 0%, #1D4ED8 100%);
+            color: white;
+            padding: 40px 48px 36px;
+        }
+        .header h1 { font-size: 1.9rem; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.02em; }
+        .header .subtitle { opacity: 0.7; font-size: 0.95rem; margin-bottom: 32px; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 14px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 12px;
+            padding: 18px 20px;
+        }
+        .stat-value { font-size: 1.9rem; font-weight: 700; line-height: 1; margin-bottom: 5px; }
+        .stat-label { font-size: 0.72rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.07em; }
+        .stat-sub { font-size: 0.78rem; opacity: 0.55; margin-top: 3px; }
+
+        /* ── Main content ── */
+        .main {
+            padding: 28px 48px 48px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin: 32px 0 14px;
+        }
+
+        .chart-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px 24px 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+        .chart-card h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 2px; }
+        .chart-card .chart-desc { font-size: 0.82rem; color: var(--muted); margin-bottom: 14px; }
+
+        .grid-2 { display: grid; grid-template-columns: 3fr 2fr; gap: 18px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+
+        /* ── Table ── */
+        .search-row { display: flex; gap: 10px; margin-bottom: 14px; }
+        .search-input, .filter-select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.88rem;
+            outline: none;
+            background: white;
+            font-family: inherit;
+        }
+        .search-input { flex: 1; }
+        .search-input:focus, .filter-select:focus { border-color: var(--accent); }
+
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        thead th {
+            text-align: left; padding: 9px 14px;
+            background: #F8FAFC; color: var(--muted);
+            font-weight: 600; font-size: 0.75rem;
+            text-transform: uppercase; letter-spacing: 0.06em;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer; user-select: none; white-space: nowrap;
+        }
+        thead th:hover { background: #F1F5F9; }
+        tbody td { padding: 11px 14px; border-bottom: 1px solid var(--border); }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover { background: #F8FAFC; }
+
+        .dot {
+            display: inline-block; width: 9px; height: 9px;
+            border-radius: 50%; margin-right: 8px; vertical-align: middle;
+        }
+
+        .bar-wrap { display: flex; align-items: center; gap: 8px; }
+        .bar-fill { height: 6px; border-radius: 3px; min-width: 2px; }
+        .bar-pct { font-size: 0.75rem; color: var(--muted); }
+
+        @media (max-width: 1000px) {
+            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .header, .main { padding-left: 20px; padding-right: 20px; }
+        }
+        @media (max-width: 600px) {
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>2025 Travel Dashboard</h1>
+    <p class="subtitle">A year across Europe, South America, Africa &amp; the Middle East</p>
+    <div class="stats-grid" id="statsGrid"></div>
+</div>
+
+<div class="main">
+
+    <p class="section-label">Monthly Overview</p>
+    <div class="chart-card">
+        <h3>Days per Month by Location</h3>
+        <p class="chart-desc">Where each month was spent</p>
+        <div id="monthlyChart"></div>
+    </div>
+
+    <p class="section-label">Destinations</p>
+    <div class="grid-2">
+        <div class="chart-card">
+            <h3>Total Days by Destination</h3>
+            <p class="chart-desc">All locations ranked by time spent</p>
+            <div id="destinationChart"></div>
+        </div>
+        <div class="chart-card">
+            <h3>Home vs. Away</h3>
+            <p class="chart-desc">Barcelona (home base) vs. everywhere else</p>
+            <div id="homeAwayChart"></div>
+        </div>
+    </div>
+
+    <p class="section-label">Country View</p>
+    <div class="chart-card">
+        <h3>Days by Country</h3>
+        <p class="chart-desc">All locations grouped by country</p>
+        <div id="countryChart"></div>
+    </div>
+
+    <p class="section-label">Trip Log</p>
+    <div class="chart-card">
+        <h3>All Stays</h3>
+        <p class="chart-desc">Full breakdown — click column headers to sort</p>
+        <div class="search-row">
+            <input type="text" class="search-input" id="searchInput" placeholder="Search location or month…">
+            <select class="filter-select" id="monthFilter"><option value="">All months</option></select>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th onclick="sortTable('month')">Month</th>
+                        <th onclick="sortTable('location')">Location</th>
+                        <th onclick="sortTable('country')">Country</th>
+                        <th onclick="sortTable('days')">Days</th>
+                        <th>Share of Month</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+const travelData = [
+    {month:'January',   location:'Peru',          days:6},
+    {month:'January',   location:'Barcelona',      days:18},
+    {month:'January',   location:'Belgium',        days:5},
+    {month:'January',   location:'Andorra',        days:2},
+    {month:'February',  location:'Barcelona',      days:26},
+    {month:'February',  location:'Vienna',         days:2},
+    {month:'March',     location:'Poland',         days:2},
+    {month:'March',     location:'Barcelona',      days:29},
+    {month:'April',     location:'Begur',          days:3},
+    {month:'April',     location:'Zurich',         days:4},
+    {month:'April',     location:'Belgium',        days:3},
+    {month:'April',     location:'Barcelona',      days:20},
+    {month:'May',       location:'Belgium',        days:5},
+    {month:'May',       location:'Dubai',          days:5},
+    {month:'May',       location:'Helsinki',       days:2},
+    {month:'May',       location:'Barcelona',      days:19},
+    {month:'June',      location:'Bucharest',      days:3},
+    {month:'June',      location:'Budapest',       days:1},
+    {month:'June',      location:'Berlin',         days:2},
+    {month:'June',      location:'Barcelona',      days:24},
+    {month:'July',      location:'La Gomera',      days:9},
+    {month:'July',      location:'Fuerteventura',  days:2},
+    {month:'July',      location:'Belgium',        days:2},
+    {month:'July',      location:'Barcelona',      days:18},
+    {month:'August',    location:'Belgium',        days:12},
+    {month:'August',    location:'Prague',         days:3},
+    {month:'August',    location:'Georgia',        days:9},
+    {month:'August',    location:'Barcelona',      days:7},
+    {month:'September', location:'Greece',         days:1},
+    {month:'September', location:'Italy',          days:5},
+    {month:'September', location:'Sotogrande',     days:5},
+    {month:'September', location:'Barcelona',      days:19},
+    {month:'October',   location:'Barcelona',      days:31},
+    {month:'November',  location:'Morocco',        days:2},
+    {month:'November',  location:'Belgium',        days:5},
+    {month:'November',  location:'Barcelona',      days:21},
+    {month:'December',  location:'Peru',           days:14},
+    {month:'December',  location:'Barcelona',      days:5},
+    {month:'December',  location:'Belgium',        days:12},
+];
+
+const monthOrder = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const monthDays  = {January:31,February:28,March:31,April:30,May:31,June:30,July:31,August:31,September:30,October:31,November:30,December:31};
+
+const locationCountry = {
+    'Barcelona':'Spain','Begur':'Spain','Sotogrande':'Spain','La Gomera':'Spain','Fuerteventura':'Spain',
+    'Belgium':'Belgium','Peru':'Peru','Vienna':'Austria','Poland':'Poland','Zurich':'Switzerland',
+    'Dubai':'UAE','Helsinki':'Finland','Bucharest':'Romania','Budapest':'Hungary',
+    'Berlin':'Germany','Prague':'Czechia','Georgia':'Georgia','Greece':'Greece',
+    'Italy':'Italy','Morocco':'Morocco','Andorra':'Andorra'
+};
+
+// Aggregations
+const locationTotals = {};
+const countryTotals  = {};
+travelData.forEach(d => {
+    locationTotals[d.location] = (locationTotals[d.location] || 0) + d.days;
+    const c = locationCountry[d.location] || d.location;
+    countryTotals[c] = (countryTotals[c] || 0) + d.days;
+});
+
+const totalDays      = Object.values(locationTotals).reduce((a,b)=>a+b,0);
+const barcelonaDays  = locationTotals['Barcelona'] || 0;
+const awayDays       = totalDays - barcelonaDays;
+const uniqueCountries = Object.keys(countryTotals).length;
+
+// Color palette — assigned by rank (most days = first color)
+const palette = [
+    '#2563EB','#F59E0B','#10B981','#EF4444','#8B5CF6',
+    '#EC4899','#06B6D4','#F97316','#84CC16','#14B8A6',
+    '#6366F1','#F43F5E','#22C55E','#A78BFA','#FBBF24',
+    '#34D399','#60A5FA','#FB923C','#4ADE80','#C084FC','#67E8F9'
+];
+const sortedLocs = Object.entries(locationTotals).sort((a,b)=>b[1]-a[1]).map(e=>e[0]);
+const locColor = {};
+sortedLocs.forEach((l,i) => locColor[l] = palette[i % palette.length]);
+
+// ── Stats ──────────────────────────────────────────────────────────────
+function renderStats() {
+    const topAway = Object.entries(locationTotals)
+        .filter(([l]) => l !== 'Barcelona')
+        .sort((a,b) => b[1]-a[1])[0];
+
+    document.getElementById('statsGrid').innerHTML = [
+        { v: totalDays,      l: 'Days Tracked',       s: 'Full year' },
+        { v: barcelonaDays,  l: 'Days in Barcelona',  s: `${Math.round(barcelonaDays/totalDays*100)}% of year` },
+        { v: awayDays,       l: 'Days Away',          s: `${sortedLocs.length - 1} other locations` },
+        { v: uniqueCountries,l: 'Countries Visited',  s: 'Across 4 continents' },
+        { v: topAway[0],     l: 'Top Away Spot',      s: `${topAway[1]} days` },
+    ].map(s=>`
+        <div class="stat-card">
+            <div class="stat-value">${s.v}</div>
+            <div class="stat-label">${s.l}</div>
+            <div class="stat-sub">${s.s}</div>
+        </div>`).join('');
+}
+
+// ── Monthly stacked bar ────────────────────────────────────────────────
+function renderMonthlyChart() {
+    const traces = sortedLocs.map(loc => ({
+        x: monthOrder,
+        y: monthOrder.map(m => { const e = travelData.find(d=>d.month===m&&d.location===loc); return e?e.days:0; }),
+        name: loc, type: 'bar',
+        marker: { color: locColor[loc] },
+        hovertemplate: `<b>${loc}</b>: %{y} days<extra></extra>`
+    }));
+
+    Plotly.newPlot('monthlyChart', traces, {
+        barmode: 'stack',
+        height: 360,
+        margin: { t:8, b:40, l:38, r:10 },
+        xaxis: { fixedrange:true, tickfont:{size:12} },
+        yaxis: { title:'Days', fixedrange:true, gridcolor:'#F1F5F9' },
+        legend: { orientation:'h', y:-0.18, font:{size:11} },
+        plot_bgcolor:'transparent', paper_bgcolor:'transparent',
+        hovermode:'x unified',
+    }, { responsive:true, displayModeBar:false });
+}
+
+// ── Destination horizontal bar ─────────────────────────────────────────
+function renderDestinationChart() {
+    const sorted = Object.entries(locationTotals).sort((a,b)=>b[1]-a[1]);
+    Plotly.newPlot('destinationChart', [{
+        y: sorted.map(d=>d[0]),
+        x: sorted.map(d=>d[1]),
+        type:'bar', orientation:'h',
+        marker:{ color: sorted.map(d=>locColor[d[0]]) },
+        hovertemplate:'<b>%{y}</b>: %{x} days<extra></extra>',
+        text: sorted.map(d=>`${d[1]}`),
+        textposition:'outside',
+    }], {
+        height: 520,
+        margin:{ t:8, b:30, l:110, r:50 },
+        xaxis:{ title:'Days', fixedrange:true, gridcolor:'#F1F5F9' },
+        yaxis:{ fixedrange:true, automargin:true },
+        plot_bgcolor:'transparent', paper_bgcolor:'transparent',
+    }, { responsive:true, displayModeBar:false });
+}
+
+// ── Home vs Away donut ─────────────────────────────────────────────────
+function renderHomeAwayChart() {
+    const awayEntries = Object.entries(locationTotals)
+        .filter(([l])=>l!=='Barcelona')
+        .sort((a,b)=>b[1]-a[1]);
+
+    const THRESHOLD = 5;
+    const main  = awayEntries.filter(e=>e[1]>=THRESHOLD);
+    const other = awayEntries.filter(e=>e[1]< THRESHOLD).reduce((s,e)=>s+e[1],0);
+    if (other>0) main.push(['Other',other]);
+
+    const labels = ['Barcelona',...main.map(e=>e[0])];
+    const values = [barcelonaDays,...main.map(e=>e[1])];
+    const colors = ['#2563EB',...main.map(e=>locColor[e[0]]||'#94A3B8')];
+
+    Plotly.newPlot('homeAwayChart', [{
+        labels, values, type:'pie', hole:0.58,
+        marker:{ colors, line:{color:'white',width:2} },
+        hovertemplate:'<b>%{label}</b>: %{value}d (%{percent})<extra></extra>',
+        textinfo:'label+percent', textposition:'outside',
+        automargin:true,
+    }], {
+        height: 520,
+        margin:{ t:20, b:20, l:10, r:10 },
+        showlegend:false,
+        annotations:[{
+            text:`<b>${Math.round(awayDays/totalDays*100)}%</b><br><span style="font-size:11px">away</span>`,
+            x:0.5, y:0.5, font:{size:20}, showarrow:false
+        }],
+        plot_bgcolor:'transparent', paper_bgcolor:'transparent',
+    }, { responsive:true, displayModeBar:false });
+}
+
+// ── Country bar chart ──────────────────────────────────────────────────
+function renderCountryChart() {
+    const sorted = Object.entries(countryTotals).sort((a,b)=>b[1]-a[1]);
+    const colors = sorted.map(([country]) => {
+        const locs = Object.entries(locationCountry)
+            .filter(([,c])=>c===country).map(([l])=>l);
+        const top = locs.sort((a,b)=>(locationTotals[b]||0)-(locationTotals[a]||0))[0];
+        return locColor[top] || '#94A3B8';
+    });
+
+    Plotly.newPlot('countryChart', [{
+        x: sorted.map(d=>d[0]),
+        y: sorted.map(d=>d[1]),
+        type:'bar',
+        marker:{ color:colors },
+        hovertemplate:'<b>%{x}</b>: %{y} days<extra></extra>',
+        text: sorted.map(d=>`${d[1]}d`),
+        textposition:'outside',
+    }], {
+        height: 300,
+        margin:{ t:30, b:60, l:40, r:10 },
+        xaxis:{ fixedrange:true, tickfont:{size:12} },
+        yaxis:{ title:'Days', fixedrange:true, gridcolor:'#F1F5F9' },
+        plot_bgcolor:'transparent', paper_bgcolor:'transparent',
+    }, { responsive:true, displayModeBar:false });
+}
+
+// ── Table ──────────────────────────────────────────────────────────────
+let sortState = { col:'month', dir:1 };
+
+function renderTable() {
+    const filter  = document.getElementById('searchInput').value.toLowerCase();
+    const monthF  = document.getElementById('monthFilter').value;
+    const monthIdx = Object.fromEntries(monthOrder.map((m,i)=>[m,i]));
+
+    let data = travelData
+        .filter(d => !monthF || d.month === monthF)
+        .filter(d => !filter || d.location.toLowerCase().includes(filter) || d.month.toLowerCase().includes(filter));
+
+    data.sort((a,b) => {
+        const getVal = d => {
+            if (sortState.col==='month')    return monthIdx[d.month];
+            if (sortState.col==='days')     return d.days;
+            if (sortState.col==='country')  return locationCountry[d.location]||d.location;
+            return d.location;
+        };
+        const va=getVal(a), vb=getVal(b);
+        return sortState.dir * (typeof va==='string' ? va.localeCompare(vb) : va-vb);
+    });
+
+    document.getElementById('tableBody').innerHTML = data.map(d => {
+        const pct  = Math.round(d.days / monthDays[d.month] * 100);
+        const barW = Math.round(pct * 1.4);
+        const country = locationCountry[d.location] || d.location;
+        return `<tr>
+            <td>${d.month}</td>
+            <td><span class="dot" style="background:${locColor[d.location]}"></span>${d.location}</td>
+            <td style="color:var(--muted)">${country}</td>
+            <td><b>${d.days}</b></td>
+            <td>
+                <div class="bar-wrap">
+                    <div class="bar-fill" style="width:${barW}px;background:${locColor[d.location]};opacity:0.75"></div>
+                    <span class="bar-pct">${pct}%</span>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function sortTable(col) {
+    sortState = { col, dir: sortState.col===col ? -sortState.dir : 1 };
+    renderTable();
+}
+
+function populateFilters() {
+    const sel = document.getElementById('monthFilter');
+    monthOrder.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; sel.appendChild(o); });
+}
+
+document.getElementById('searchInput').addEventListener('input', renderTable);
+document.getElementById('monthFilter').addEventListener('change', renderTable);
+
+// ── Init ───────────────────────────────────────────────────────────────
+renderStats();
+renderMonthlyChart();
+renderDestinationChart();
+renderHomeAwayChart();
+renderCountryChart();
+populateFilters();
+renderTable();
+</script>
+</body>
+</html>
